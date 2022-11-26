@@ -1,0 +1,8 @@
+{
+	"dependencies": [],
+	"description": "Sublime Text 2/3 syntax highlighting for .nt format",
+	"platforms": ["*"],
+	"url": "https://github.com/dievilz/sublime_nestedtext_highlighting",
+	"version": "0.1",
+	"sublime_text": "*"
+}

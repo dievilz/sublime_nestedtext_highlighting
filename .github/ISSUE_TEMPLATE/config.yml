@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name:  Ask a question 💬
+    url:   https://github.com/dievilz/sublime_nestedtext_highlighting/discussions/new?category=q-a
+    about: Let us know if you're stuck or unsure about something.
+  - name:  Tell your idea 💭
+    url:   https://github.com/dievilz/sublime_nestedtext_highlighting/discussions/new?category=ideas
+    about: Suggest a new feature, an idea or program improvements.
+  - name:  Is your issue not here? 🔎
+    url:   https://github.com/dievilz/sublime_nestedtext_highlighting/discussions/new
+    about: If the available categories doesn't match with your issue, take a look in Discussions or suggest another category of issue.

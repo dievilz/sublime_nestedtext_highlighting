@@ -1,0 +1,6 @@
+name: Comments
+scope: source.nestedtext
+settings:
+  shellVariables:
+    - name: TM_COMMENT_START
+      value: "# "
