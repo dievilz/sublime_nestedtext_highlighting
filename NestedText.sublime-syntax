@@ -17,10 +17,10 @@ variables:
   peek_key_start: '(?=[A-Za-z0-9_''"-])'
   dot_peek_key: '{{ws}}(\.){{ws}}{{peek_key_start}}'
 
-  string_tag:     '(> )|(>\n)'
-  key_tag:        '(: )|(:\n)'
-  list_tag:       '(- )|(-\n)'
-  dictionary_tag: '[^\n\-\>\:\[\{].*:(?=.+\n)'
+  string_tag:     '(> )|(>$)'
+  key_tag:        '(: )|(:$)'
+  list_tag:       '(- )|(-$)'
+  dictionary_tag: '[^\n\-\>\:\[\{].*:(?=.+$)'
 
   # integer = [ "-" / "+" ] int
   # int = DIGIT / digit1-9 1*( DIGIT / "_" DIGIT )
@@ -31,22 +31,7 @@ variables:
   oct_int: '0o[0-7](?:[0-7]|_[0-7])*'
   bin_int: '0b[0-1](?:[0-1]|_[0-1])*'
 
-  ns_plain_first_plain_out: |-
-    (?x:
-        [^\s{{c_indicator}}]
-      | [?:-] \S
-    )
-
-  _flow_scalar_end_plain_out: |- # kind of the negation of nb-ns-plain-in-line(c) c=plain-out
-    (?x:
-      (?=
-          \s* $
-        | \s+ \#
-        | \s* : (\s|$)
-      )
-    )
-
-  _type_bool_11: |-
+  bool: |-
     (?x:
        y|Y|yes|Yes|YES|n|N|no|No|NO
       |true|True|TRUE|false|False|FALSE
@@ -55,39 +40,62 @@ variables:
 
 contexts:
   main:
-    - match: '^{{ws}}'
-      # Ignore leading whitespace for all expressions.
     - include: line-types
-
-  line-types:
-    # - include: illegal        # For debugging
-    - include: comments         # #
-    - include: string-types     # >␣
-    - include: key-types        # :␣
-    - include: list-types       # -␣
-    - include: dictionary-types # :␣
+    # - include: illegal
 
   illegal:
-    - match: (.*)
-      # Invalid things -> everything unmatched
+    - match: (.*) ## Invalid things -> everything unmatched
       captures:
         1: invalid.illegal.nestedtext
 
-  comments:
-    - match: '{{ws}}((#).*)'
+  line-types:
+    - include: key-types        # :␣   '(: )|(:$)'
+    - include: dictionary-types # :␣   '^[^\#\n\-\>\:\[\{].*(:)'  /(?=.+$)
+    - include: list-types       # -␣   '(- )|(-$)'
+    # - include: inline-types
+    - include: string-types     # (-␣) OR (:␣), (>␣) OR (>↵),
+    - include: comments
+
+
+################################################################################
+
+  # key-types:
+
+################################################################################
+
+  dictionary-types:
+    - include: dictionary-item           # :␣
+    - include: dictionary-multiline-item # :␣
+
+  dictionary-item:
+    - meta_scope: meta.tag.key.nestedtext
+    - match: '^[^\#\n\-\>\:\[\{](.*)(:)'
       captures:
-        1: comment.line.number-sign.nestedtext
-        2: punctuation.definition.comment.nestedtext
+        1: keyword.other.name.nestedtext
+        2: punctuation.separator.mapping.key-value.nestedtext
+      # push:
+      #   - meta_scope: meta.mapping.value.json
+      #   - include: value
+      #     pop: 1
+
+
+################################################################################
+
+  list-types:
+    - include: list-item              # -␣
+
+  # list-item:
+  #   - match: (-$)
+
+
+################################################################################
 
   string-types:
-    - include: string-item               # >␣
-    - include: inline-string-item        # >␣
-    - include: multiline-string-item     # >␣
+    - include: restofline-string-item # (-␣) OR (:␣)
+    - include: multiline-string-item  # (>␣) OR (>↵)
 
-  # inline-string-item:
-
-  multiline-string-item:
-    - match: '{{string_tag}}'
+  restofline-string-item:
+    - match: (- )
       scope: punctuation.definition.string.begin.nestedtext
       set:
         - meta_scope: string.quoted.double.basic.nestedtext
@@ -95,134 +103,29 @@ contexts:
           scope: punctuation.definition.string.end.nestedtext
           pop: true
 
-  key-types:
-    - match: '{{peek_key_start}}' ## '(?=[A-Za-z0-9_''"-])'
-      push: [key-item]
-
-  key-item:
-    - meta_scope: meta.tag.key.nestedtext
-    - match: '{{peek_key_start}}' ## '(?=[A-Za-z0-9_''"-])'
-      push: [maybe-dot-key, key-simple]
-    - match: '(?={{ws}}{{dictionary_tag}})'
-      pop: true
-    - match: '{{ws}}$'
-      # Early exit to avoid errors while typing.
-      pop: true
-    # - match: '.'
-    #   scope: invalid.illegal.key.nestedtext
-    #   pop: true
-
-  key-simple:
-    - match: '[A-Za-z0-9_]+'
-      scope: entity.name.tag.nestedtext
-      pop: true
-    - include: key-quoted
-    - match: '\S+'
-      scope: invalid.illegal.key.nestedtext
-      pop: true
-
-  key-quoted:
-    # - match: '"(?i)([^\"]+)"\s*?(:)'
-    - match: '"'
+  multiline-string-item:
+    - match: (> )|(>$)
+      scope: punctuation.definition.string.begin.nestedtext
       set:
-        - meta_scope: entity.name.tag.nestedtext
-        - match: '"'
-          scope: entity.name.tag.end.nestedtext
-          pop: true
+        - meta_scope: string.quoted.double.basic.nestedtext
         - match: '\n'
-          scope: invalid.illegal.string.non-terminated.nestedtext
+          scope: punctuation.definition.string.end.nestedtext
           pop: true
-    - match: \'
+
+
+################################################################################
+
+  comments:
+    # ## Based on https://github.com/jasonwilliams/sublime_toml_highlighting
+    # - match: '{{ws}}((#).*)'
+    #   captures:
+    #     1: comment.line.number-sign.nestedtext
+    #     2: punctuation.definition.comment.nestedtext
+
+    ## Based on https://github.com/sublimehq/Packages/blob/master/YAML/YAML.sublime-syntax#L686
+    - match: '#'
+      scope: punctuation.definition.comment.line.number-sign.nestedtext
       set:
-        - meta_scope: entity.name.tag.nestedtext
-        - match: \'
-          scope: entity.name.tag.end.nestedtext
-          pop: true
-        - match: '\n'
-          scope: invalid.illegal.string.non-terminated.nestedtext
-          pop: true
-
-  maybe-dot-key:
-    - match: '{{dot_peek_key}}' ## '{{ws}}(\.){{ws}}{{peek_key_start}}'
-      captures:
-        1: punctuation.separator.key.nestedtext
-      push: key-simple
-    - match: '(?={{ws}}(?::|$))'
-      pop: true
-    - match: '.'
-      scope: invalid.illegal.key.nestedtext
-      pop: true
-
-  maybe-comment-eol:
-    - include: comments
-    - match: '$'
-      pop: true
-    - match: '.+'
-      # This also highlights trailing whitespece.  Although that is valid
-      # TOML, it doesn't seem bad to me.  If that's annoying, change this
-      # to '[^ \n]+'.
-      scope: invalid.illegal.trailing.toml
-      pop: true
-
-  list-types:
-    - include: list-item                 # -␣
-    - include: inline-list-item          # ^[
-
-  list-item:
-    - match: (-)(?!\S)
-      scope: punctuation.definition.block.sequence.item.yaml
-
-  dictionary-types:
-    - include: dictionary-item           # :␣
-    - include: dictionary-multiline-item # :␣
-    - include: inline-dictionary-item    # ^{
-
-  dictionary-item:
-    - match: \?
-      scope: punctuation.definition.key-value.begin.nestedtext
-      push:
-        - meta_scope: meta.block-mapping.nestedtext
-        - match: (?=\?) # Empty mapping keys & values are allowed
-          pop: true
-        - match: ^ *(:)
-          captures:
-            1: punctuation.separator.key-value.mapping.nestedtext
-          pop: true
-        - match: ':'
-          scope: invalid.illegal.expected-newline.nestedtext
-          pop: true
-        - include: dictionary-item
-    # Attempt to match plain-out scalars and highlight as "entity.name.tag",
-    # if followed by a colon
-    - match: |
-        (?x)
-        (?=
-          {{ns_plain_first_plain_out}}
-          (
-              [^\s:]
-            | : \S
-            | \s+ (?![#\s])
-          )*
-          \s*
-          :
-          (\s|$)
-        )
-      push:
-        - include: flow-scalar-plain-out-implicit-type-12
-        - match: '{{_flow_scalar_end_plain_out}}'
-          pop: true
-        - match: (?={{ns_plain_first_plain_out}})
-          set:
-            - meta_scope: string.unquoted.plain.out.nestedtext entity.name.tag.nestedtext
-            - meta_include_prototype: false
-            - match: '{{_flow_scalar_end_plain_out}}'
-              pop: true
-    - match: :(?=\s|$)
-      scope: punctuation.separator.key-value.mapping.nestedtext
-
-  flow-scalar-plain-out-implicit-type-12:
-    # Less aggressive variant based on the YAML 1.2 core schema
-    - match: '{{_type_bool_11}}{{_flow_scalar_end_plain_out}}'
-      scope: constant.language.boolean.yaml
-
-...
+      - meta_scope: comment.line.number-sign.nestedtext
+      - match: \n|\z
+        pop: true

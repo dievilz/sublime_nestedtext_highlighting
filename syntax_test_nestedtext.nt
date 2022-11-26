@@ -18,13 +18,16 @@
    is_false: false
    is_null: null
 
-'vice president':
-   name: Margaret Hodge
+'Margaret Hodge':
+   position: 'vice president'
    address:
       > 2586 Marigold Lane
       > Topeka, Kansas 20682
-   phone: 1-470-555-0398
+   phone:
+      {cell: 1-470-555-0398, home: 1-470-555-7570}
    email: margaret.hodge@ku.edu
+   kids:
+        [Arnie, Zach, Maggie]
    additional roles:
       - new membership task force
       - accounting task force
@@ -33,8 +36,10 @@ treasurer:
    -
       name: Fumiko Purvis
       address:
+         >
          > 3636 Buffalo Ave
          > Topeka, Kansas 20692
+         >
       phone: 1-268-555-0280
       email: fumiko.purvis@hotmail.com
       additional roles:
