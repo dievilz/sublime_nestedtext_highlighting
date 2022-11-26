@@ -26,7 +26,6 @@ indent_style = space
 
 [*.json]
 indent_style = tab
-indent_size = 4
 
 [composer.json]
 indent_style = space
@@ -37,7 +36,7 @@ indent_style = space
 
 [*.nt]
 indent_style = space
-indent_size = 3
+# indent_style = tab
 
 [*.xml]
 indent_style = space
